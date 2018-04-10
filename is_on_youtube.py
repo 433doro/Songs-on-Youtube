@@ -5,9 +5,11 @@ from selenium.webdriver.support import expected_conditions as e_c
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import ElementNotVisibleException
+import is_on_youtube_configuration
 
 
 def collect_user_input():
+    # TODO: Naming
     song_name = input("Please enter Artist and song name:")  # type: str
     return song_name
 
@@ -18,6 +20,10 @@ class CheckIfSongIsOnYoutube(object):
         self.driver = webdriver.Chrome()
 
     def look_for_song(self):
+        """
+
+        :return:
+        """
         song_and_artist = collect_user_input()
         self._open_youtube()
         self._search_song(song_and_artist)
@@ -25,12 +31,14 @@ class CheckIfSongIsOnYoutube(object):
         self.driver.close()
 
     def _open_youtube(self):
-        self.driver.get("http://www.youtube.com")
+        self.driver.get(is_on_youtube_configuration.youtube_path)
 
     def _search_song(self, song):
         song_and_artist_name = song
         try:
-            search_box = self.driver.find_element_by_id("search")
+            sleep(3)
+            # TODO: Move hard-coded strings to configuration
+            search_box = self.driver.find_element_by_id(is_on_youtube_configuration.search_id)
             search_box.send_keys(song_and_artist_name)
             search_button = self.driver.find_element_by_id("search-icon-legacy")
             search_button.click()
@@ -42,6 +50,7 @@ class CheckIfSongIsOnYoutube(object):
             raise
 
     def _look_for_results(self):
+
         try:
             video_duration = WebDriverWait(self.driver, 5, 0.1).until(
                 e_c.presence_of_element_located(
@@ -75,10 +84,14 @@ class CheckIfSongIsOnYoutube(object):
         print("Song name: {1}\nDuration: {2}".format(self, video_name_in_youtube, video_duration))
 
 
-if __name__ == '__main__':
+def main():
     song_and_artist = collect_user_input()
     obj = CheckIfSongIsOnYoutube()
     obj._open_youtube()
     obj._search_song(song_and_artist)
     obj._look_for_results()
     obj.driver.close()
+
+
+if __name__ == '__main__':
+    main()
