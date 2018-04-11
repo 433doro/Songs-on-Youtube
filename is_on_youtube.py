@@ -1,17 +1,17 @@
 from time import sleep
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as e_c
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import NoSuchElementException
-from selenium.common.exceptions import ElementNotVisibleException
+
 import is_on_youtube_configuration
 
 
 def collect_user_input():
-    # TODO: Naming
-    song_name = input("Please enter Artist and song name:")  # type: str
-    return song_name
+    song = input("Please enter Artist and song name:")  # type: str
+    return song
 
 
 class CheckIfSongIsOnYoutube(object):
@@ -20,10 +20,6 @@ class CheckIfSongIsOnYoutube(object):
         self.driver = webdriver.Chrome()
 
     def look_for_song(self):
-        """
-
-        :return:
-        """
         song_and_artist = collect_user_input()
         self._open_youtube()
         self._search_song(song_and_artist)
@@ -31,20 +27,33 @@ class CheckIfSongIsOnYoutube(object):
         self.driver.close()
 
     def _open_youtube(self):
-        self.driver.get(is_on_youtube_configuration.youtube_path)
+        self.driver.get(is_on_youtube_configuration.YOUTUBE_PATH)
 
     def _search_song(self, song):
         song_and_artist_name = song
+        """
+        this functions returns selenium's NoSuchElementException, the trigger is that the WebDriver couldn't find
+        the HTML element to click on. 
+        :return: NoSuchElementException
+        """
         try:
-            sleep(3)
-            # TODO: Move hard-coded strings to configuration
-            search_box = self.driver.find_element_by_id(is_on_youtube_configuration.search_id)
+            search_box = WebDriverWait(self.driver, 10).until(
+                e_c.presence_of_element_located(
+                    (By.ID, is_on_youtube_configuration.SEARCH_BOX_ID)
+                )
+            )
             search_box.send_keys(song_and_artist_name)
-            search_button = self.driver.find_element_by_id("search-icon-legacy")
+            sleep(3)
+            search_button = WebDriverWait(self.driver, 5, 0.1).until(
+                e_c.presence_of_element_located(
+                    (By.ID, is_on_youtube_configuration.SEARCH_BUTTON_ID)
+                )
+            )
             search_button.click()
+
         except NoSuchElementException:
-            no_network_error = self.driver.find_element_by_tag_name("h1").text
-            if no_network_error == "There is no Internet connection":
+            no_network_error_textbox = self.driver.find_element_by_tag_name("h1").text
+            if no_network_error_textbox == "There is no Internet connection":
                 print("There is no Internet connection, please try again.\n")
                 self.driver.close()
             raise
@@ -52,16 +61,17 @@ class CheckIfSongIsOnYoutube(object):
     def _look_for_results(self):
 
         try:
+            self.driver.refresh()
             video_duration = WebDriverWait(self.driver, 5, 0.1).until(
                 e_c.presence_of_element_located(
-                    (By.XPATH, "//span[@class='style-scope ytd-thumbnail-overlay-time-status-renderer']")
+                    (By.XPATH, is_on_youtube_configuration.FIRST_VIDEO_RESULT_DURATION)
                 )
             ).text
 
-        except ElementNotVisibleException:
+        except TimeoutException:
             no_results = WebDriverWait(self.driver, 5, 0.1).until(
                 e_c.presence_of_element_located(
-                    (By.CLASS_NAME, "promo-title style-scope ytd-background-promo-renderer")
+                    (By.XPATH, is_on_youtube_configuration.NO_RESULTS_XPATH)
                 )
             ).text
 
@@ -69,29 +79,14 @@ class CheckIfSongIsOnYoutube(object):
                 print("No results found")
 
         WebDriverWait(self.driver, 5, 0.1).until(
-            e_c.presence_of_element_located(
-                (By.XPATH, "//a[@id='video-title']")
+            e_c.element_to_be_clickable(
+                (By.TAG_NAME, is_on_youtube_configuration.SONG_TITLE_TAG_NAME)
             )
         ).click()
-
         sleep(3)
-
         video_name_in_youtube = WebDriverWait(self.driver, 10, 0.1).until(
             e_c.presence_of_element_located(
-                (By.XPATH, "//yt-formatted-string[@class='style-scope ytd-video-primary-info-renderer']")
+                (By.XPATH, is_on_youtube_configuration.VIDEO_NAME_IN_YOUTUBE_XPATH)
             )
         ).text
         print("Song name: {1}\nDuration: {2}".format(self, video_name_in_youtube, video_duration))
-
-
-def main():
-    song_and_artist = collect_user_input()
-    obj = CheckIfSongIsOnYoutube()
-    obj._open_youtube()
-    obj._search_song(song_and_artist)
-    obj._look_for_results()
-    obj.driver.close()
-
-
-if __name__ == '__main__':
-    main()
