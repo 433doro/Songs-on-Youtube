@@ -5,7 +5,6 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as e_c
 from selenium.webdriver.support.ui import WebDriverWait
-
 import is_on_youtube_configuration
 
 
@@ -28,6 +27,8 @@ class CheckIfSongIsOnYoutube(object):
 
     def _open_youtube(self):
         self.driver.get(is_on_youtube_configuration.YOUTUBE_PATH)
+        if self.driver.find_element_by_id("logo-icon-container"):
+            return "Successfully entered youtube"
 
     def _search_song(self, song):
         song_and_artist_name = song
@@ -50,11 +51,12 @@ class CheckIfSongIsOnYoutube(object):
                 )
             )
             search_button.click()
+            return "managed to search a song"
 
         except NoSuchElementException:
             no_network_error_textbox = self.driver.find_element_by_tag_name("h1").text
             if no_network_error_textbox == "There is no Internet connection":
-                print("There is no Internet connection, please try again.\n")
+                return "There is no Internet connection, please try again.\n"
                 self.driver.close()
             raise
 
@@ -62,7 +64,7 @@ class CheckIfSongIsOnYoutube(object):
 
         try:
             self.driver.refresh()
-            video_duration = WebDriverWait(self.driver, 5, 0.1).until(
+            video_duration = "Duration : " + WebDriverWait(self.driver, 5, 0.1).until(
                 e_c.presence_of_element_located(
                     (By.XPATH, is_on_youtube_configuration.FIRST_VIDEO_RESULT_DURATION)
                 )
@@ -76,7 +78,7 @@ class CheckIfSongIsOnYoutube(object):
             ).text
 
             if no_results == "No results found":
-                print("No results found")
+                return "No results found"
 
         WebDriverWait(self.driver, 5, 0.1).until(
             e_c.element_to_be_clickable(
@@ -84,9 +86,10 @@ class CheckIfSongIsOnYoutube(object):
             )
         ).click()
         sleep(3)
-        video_name_in_youtube = WebDriverWait(self.driver, 10, 0.1).until(
+        video_name_in_youtube = "Song Name :" + WebDriverWait(self.driver, 10, 0.1).until(
             e_c.presence_of_element_located(
                 (By.XPATH, is_on_youtube_configuration.VIDEO_NAME_IN_YOUTUBE_XPATH)
             )
         ).text
-        print("Song name: {1}\nDuration: {2}".format(self, video_name_in_youtube, video_duration))
+
+        return video_name_in_youtube, video_duration
