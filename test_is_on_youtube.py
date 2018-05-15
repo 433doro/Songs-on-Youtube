@@ -1,6 +1,7 @@
 from is_on_youtube import CheckIfSongIsOnYoutube, NoResultsException
 import pytest
 
+
 class TestSearchingSongInYouTube(object):
     chrome_tab = CheckIfSongIsOnYoutube()
 

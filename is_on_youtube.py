@@ -1,7 +1,7 @@
-from time import sleep
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import ElementNotVisibleException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -13,7 +13,7 @@ class NoResultsException(Exception):
     pass
 
 
-def check_if_driver_page_is_no_internet_connection(driver):
+def check_if_driver_page_has_no_internet_connection(driver):
     """
     Check if the current chrome page contains the header "There is no Internet connection"
     :param driver:
@@ -65,6 +65,8 @@ class CheckIfSongIsOnYoutube(object):
         except TimeoutException:
             logging.exception("Couldn't click on searched song name")
             raise
+        except ElementNotVisibleException:
+            logging.exception("Song name element is not visible")
 
         finally:
             # TODO(Dror): Check if the driver has been opened
@@ -76,14 +78,13 @@ class CheckIfSongIsOnYoutube(object):
         the HTML element to click on. 
         :return: NoSuchElementException
         """
-        search_box = WebDriverWait(self.driver, 10).until(
+        search_box = WebDriverWait(self.driver, 10, 0.1).until(
             EC.presence_of_element_located(
                 (By.ID, consts.SEARCH_BOX_ID)
             )
         )
         search_box.send_keys(song)
         # TODO(Dror): Remove the sleeps
-        sleep(3)
         WebDriverWait(self.driver, 5, 0.1).until(
             EC.presence_of_element_located(
                 (By.ID, consts.SEARCH_BUTTON_ID)
@@ -91,13 +92,11 @@ class CheckIfSongIsOnYoutube(object):
         ).click()
 
     def _parse_song_results(self):
-        self.driver.refresh()
-        sleep(3)
+
         # TODO(Dror): Remove this
         try:
-            sleep(3)
             video_duration = WebDriverWait(self.driver, 5, 0.1).until(
-                EC.presence_of_element_located(
+                EC.visibility_of_element_located(
                     (By.XPATH, consts.FIRST_VIDEO_RESULT_DURATION)
                 )
             ).text
@@ -110,25 +109,33 @@ class CheckIfSongIsOnYoutube(object):
             ).text
 
             if no_results == "No results found":
-                raise NoResultsException()
+                raise NoResultsException
+
+        except ElementNotVisibleException:
+
+            raise ElementNotVisibleException
 
         try:
-            self.driver.refresh()
-            sleep(3)
-            self.driver.find_element_by_tag_name(consts.SONG_TITLE_TAG_NAME).click()
-            # WebDriverWait(self.driver, 10, 2).until(
-            #     EC.element_to_be_clickable(
-            #         (By.TAG_NAME, consts.SONG_TITLE_TAG_NAME)
-            #     )
-            # ).click()
+            video_name_in_youtube = WebDriverWait(self.driver, 5, 0.1).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, consts.SONG_TITLE_XPATH)
+                )
+            ).text
+
         except TimeoutException:
 
             raise TimeoutException
 
-        video_name_in_youtube = WebDriverWait(self.driver, 10, 0.1).until(
-            EC.presence_of_element_located(
-                (By.XPATH, consts.VIDEO_NAME_IN_YOUTUBE_XPATH)
-            )
-        ).text
+        except NoSuchElementException:
+
+            raise NoSuchElementException
+
+        except ElementNotVisibleException:
+
+            raise ElementNotVisibleException
+
+        except TimeoutException:
+
+            raise TimeoutException
 
         return video_name_in_youtube, video_duration
